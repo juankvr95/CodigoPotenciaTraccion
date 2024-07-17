@@ -1,0 +1,62 @@
+
+################################################################################
+######       UTN - PROYECTO - ROSALES KEVIN & VILATUÑA JUAN           ##########
+# ##############################################################################
+############       CALCULO DE POTENCIA DE TRACCIÓN             #################
+
+
+
+
+library("ggplot2")
+library("dplyr")
+
+#====================  1.IMPORTAR DATOS  =======================================
+
+df <- read.table("D:/8VO CIAUT/ITINERARIO/2B/PROJECT 2B/DATOS CSV/DATOS SAN ANTONIO.csv",sep=";", dec=",", header = TRUE,stringsAsFactors=F)
+
+df_bus <- select(df, "Tiempo","Distancia.m.","Velocidad.ms.")
+
+#====================  2.CÁLCULO POTENCIA DE TRACCIÓN  =========================
+
+#==========================2.1 CONSTANTES FIJAS ================================
+  gravedad <- 9.807 #[m/s2]
+  densidad_aire <- 1.095# [kg/m3]
+  velocidad_viento <- 0 # [m/s2]
+  masa_autobus <- 14200 # [kg]
+  masa_adicional <- 385 # [kg]
+  #area_bus <- 3.09*2.55 # [m2]
+  area_bus <- 7.17 # [m2]
+  masa_total <- masa_autobus+masa_adicional
+
+#========================= 2.2 CONSTANTES DINÁMICA LONGITUDINAL ================ 
+  resist_rodadura <- 0.00652
+  coef_roz_aerod <- 0.64
+  factor_masa_tp <- 0.1
+  
+#========================= 2.3 CÁLCULO POTENCIA DE TRACCIÓN ====================
+#========================= 2.4. POTENCIA DE TRACCION SEGUNDO A SEGUNDO =========
+  
+  df_Pot <- df_bus
+  df_Pot$PendienteG <- df$PendienteG
+  df_Pot$Aceleracion <- df$Aceleracion
+  df_Pot$Velocidad.ms <- df$Velocidad.ms.
+  
+  df_Pot$Pr_rodadura <- masa_total*gravedad*resist_rodadura*df_Pot$Velocidad.ms.*cos(atan((df_Pot$PendienteG/100)))/1000  # [KiloWatts]
+  df_Pot$Pr_aero <- ((1/2)*densidad_aire*coef_roz_aerod*area_bus*(df_Pot$Velocidad.ms.+velocidad_viento)^2*df_Pot$Velocidad.ms.)/1000 #[KiloWatts]
+  df_Pot$Pr_pendiente<-(masa_total*gravedad*sin(atan(df_Pot$PendienteG/100* pi / 180)))*(df_Pot$Velocidad.ms./1000)# [KiloWatts]
+  df_Pot$Pr_aceleracion <-  masa_total*df_Pot$Aceleracion*(1+factor_masa_tp)*(df_Pot$Velocidad.ms./1000)# [KiloWatts]
+  df_Pot$P_Traccion <- df_Pot$Pr_rodadura+df_Pot$Pr_aero +df_Pot$Pr_pendiente+df_Pot$Pr_aceleracion
+  
+#====================== 3. ESTADÍSTICA DE POTENCIA =============================
+    
+    P_Traccion <- df_Pot$P_Traccion
+    Pot_Traccion_inf <- P_Traccion [is.finite(P_Traccion)]
+    Pot_Traccion_total <- sum(Pot_Traccion_inf)
+    #kW
+    P_Traccion_Total <-sum(df_Pot$P_Traccion )
+    #kW/h
+    E_traccion_total <-P_Traccion_Total/3600
+    #Wh
+    Wh_E_traccion_total <- E_traccion_total*1000
+    
+  
